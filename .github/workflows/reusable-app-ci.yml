@@ -1,0 +1,53 @@
+name: Reusable App CI
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        description: "Push image to GHCR (true on merge to main, false on PR)"
+        type: boolean
+        required: false
+        default: false
+      image-name:
+        description: "Image name without tag (e.g. proops2026-taskmanager/task-service)"
+        type: string
+        required: true
+      node-version:
+        description: "Node.js version"
+        type: string
+        required: false
+        default: "20"
+      working-directory:
+        description: "Directory containing package.json"
+        type: string
+        required: false
+        default: "."
+    secrets:
+      GHCR_TOKEN:
+        description: "GitHub token with packages:write scope"
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test
+        uses: ./.github/actions/build-app
+        with:
+          node-version: ${{ inputs.node-version }}
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Build and push Docker image
+        uses: ./.github/actions/docker-build-push
+        with:
+          image-name: ${{ inputs.image-name }}
+          image-tag: ${{ github.sha }}
+          push: ${{ inputs.push }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GHCR_TOKEN }}

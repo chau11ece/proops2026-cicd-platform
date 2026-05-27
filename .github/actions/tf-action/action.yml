@@ -1,0 +1,79 @@
+name: "Terraform Action"
+description: "Set up Terraform with AWS credentials and run init + validate + plan/apply/destroy"
+
+inputs:
+  terraform-version:
+    description: "Terraform version to install"
+    required: false
+    default: "1.9.8"
+  working-directory:
+    description: "Directory containing Terraform files"
+    required: false
+    default: "iac/terraform/dev"
+  action:
+    description: "Terraform command to run: plan | apply | destroy"
+    required: true
+  tfplan-file:
+    description: "Plan output file name (used for apply)"
+    required: false
+    default: "tfplan"
+  aws-region:
+    description: "AWS region"
+    required: false
+    default: "eu-central-1"
+  aws-access-key-id:
+    description: "AWS access key ID"
+    required: false
+    default: ""
+  aws-secret-access-key:
+    description: "AWS secret access key"
+    required: false
+    default: ""
+  aws-session-token:
+    description: "AWS session token (for MFA/STS)"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-session-token: ${{ inputs.aws-session-token }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Terraform init
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform init
+
+    - name: Terraform validate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform validate
+
+    - name: Terraform plan
+      if: ${{ inputs.action == 'plan' || inputs.action == 'apply' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform plan -out=${{ inputs.tfplan-file }}
+
+    - name: Terraform apply
+      if: ${{ inputs.action == 'apply' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform apply -auto-approve ${{ inputs.tfplan-file }}
+
+    - name: Terraform destroy
+      if: ${{ inputs.action == 'destroy' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: terraform destroy -auto-approve

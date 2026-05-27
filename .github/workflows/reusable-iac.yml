@@ -1,0 +1,50 @@
+name: Reusable IaC
+
+on:
+  workflow_call:
+    inputs:
+      action:
+        description: "Terraform action: plan | apply | destroy"
+        type: string
+        required: true
+      environment:
+        description: "Target environment: dev | test | prod"
+        type: string
+        required: false
+        default: "dev"
+      working-directory:
+        description: "Path to Terraform environment directory"
+        type: string
+        required: false
+        default: "iac/terraform/dev"
+      aws-region:
+        description: "AWS region"
+        type: string
+        required: false
+        default: "eu-central-1"
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_SESSION_TOKEN:
+        required: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Terraform ${{ inputs.action }}
+        uses: ./.github/actions/tf-action
+        with:
+          action: ${{ inputs.action }}
+          working-directory: ${{ inputs.working-directory }}
+          aws-region: ${{ inputs.aws-region }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
