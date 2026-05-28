@@ -22,6 +22,11 @@ on:
         type: string
         required: false
         default: "."
+      context:
+        description: "Docker build context path (defaults to working-directory)"
+        type: string
+        required: false
+        default: "."
     secrets:
       GHCR_TOKEN:
         description: "GitHub token with packages:write scope"
@@ -48,6 +53,7 @@ jobs:
         with:
           image-name: ${{ inputs.image-name }}
           image-tag: ${{ github.sha }}
+          context: ${{ inputs.context }}
           push: ${{ inputs.push }}
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GHCR_TOKEN }}
