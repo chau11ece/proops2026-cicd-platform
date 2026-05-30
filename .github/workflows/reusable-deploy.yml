@@ -1,0 +1,54 @@
+name: Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      image-tag:
+        description: "Commit SHA to deploy — copy from a reusable-build run summary"
+        type: string
+        required: true
+      environment:
+        description: "Target environment: dev | staging | prod"
+        type: string
+        required: true
+      project-name:
+        description: "GitHub org/project name (e.g. proops2026-taskmanager)"
+        type: string
+        required: true
+      service-name:
+        description: "K8s deployment name and GHCR image name"
+        type: string
+        required: true
+    secrets:
+      KUBE_CONFIG_DATA:
+        description: "Base64-encoded kubeconfig for the target cluster"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # resolves per-env secrets (KUBE_CONFIG_DATA)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy ${{ inputs.environment }} (image @${{ inputs.image-tag }})
+        run: |
+          kubectl -n ${{ inputs.environment }} set image \
+            deployment/${{ inputs.service-name }} \
+            ${{ inputs.service-name }}=ghcr.io/${{ inputs.project-name }}/${{ inputs.service-name }}:${{ inputs.image-tag }}
+          kubectl -n ${{ inputs.environment }} rollout status \
+            deployment/${{ inputs.service-name }} --timeout=180s
+
+      - name: Verify deployed image
+        run: |
+          kubectl -n ${{ inputs.environment }} describe pod \
+            -l app=${{ inputs.service-name }} | grep -E "Image:|Status:"

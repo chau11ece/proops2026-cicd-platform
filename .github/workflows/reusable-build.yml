@@ -1,0 +1,62 @@
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      project-name:
+        description: "GitHub org/project name (e.g. proops2026-taskmanager)"
+        type: string
+        required: true
+      service-name:
+        description: "Service name — used as GHCR image name and K8s deployment name"
+        type: string
+        required: true
+      node-version:
+        type: string
+        required: false
+        default: "20"
+      working-directory:
+        description: "Directory containing package.json"
+        type: string
+        required: false
+        default: "."
+      context:
+        description: "Docker build context path"
+        type: string
+        required: false
+        default: "."
+    outputs:
+      image-tag:
+        description: "Commit SHA used as the image tag — pass to reusable-deploy.yml"
+        value: ${{ jobs.build.outputs.image-tag }}  # workflow-level bridge
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.set-tag.outputs.tag }}   # job-level output
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test
+        uses: chau11ece/proops2026-cicd-platform/.github/actions/build-app@v2
+        with:
+          node-version: ${{ inputs.node-version }}
+          working-directory: ${{ inputs.working-directory }}
+
+      - id: set-tag
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: chau11ece/proops2026-cicd-platform/.github/actions/docker-build-push@v2
+        with:
+          image-name: ${{ inputs.project-name }}/${{ inputs.service-name }}
+          image-tag: ${{ steps.set-tag.outputs.tag }}
+          context: ${{ inputs.context }}
+          push: "true"
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
