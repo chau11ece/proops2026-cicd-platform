@@ -21,8 +21,8 @@ on:
         required: true
     secrets:
       KUBE_CONFIG_DATA:
-        description: "Base64-encoded kubeconfig for the target cluster"
-        required: true
+        description: "Base64-encoded kubeconfig for the target cluster (provided by GitHub Environment)"
+        required: false   # environment: on the deploy job injects this from GitHub Environments
 
 jobs:
   deploy:
