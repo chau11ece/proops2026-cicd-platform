@@ -21,8 +21,8 @@ on:
         required: true
     secrets:
       KUBE_CONFIG_DATA:
-        description: "Base64-encoded kubeconfig — passed via secrets: inherit from caller repo"
-        required: false
+        description: "Base64-encoded kubeconfig — explicitly passed by each caller"
+        required: true
 
 jobs:
   deploy:
@@ -43,7 +43,6 @@ jobs:
           mkdir -p ~/.kube
           printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-          echo "Kubeconfig server: $(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
 
       - name: Deploy ${{ inputs.environment }} (image @${{ inputs.image-tag }})
         run: |
