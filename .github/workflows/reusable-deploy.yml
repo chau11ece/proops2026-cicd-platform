@@ -38,7 +38,11 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+          printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          echo "Kubeconfig size: $(wc -c < ~/.kube/config) bytes"
+          echo "First line: $(head -1 ~/.kube/config)"
+          kubectl config view --minify 2>&1 | head -10 || true
 
       - name: Deploy ${{ inputs.environment }} (image @${{ inputs.image-tag }})
         run: |
