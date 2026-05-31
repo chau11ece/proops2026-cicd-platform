@@ -8,7 +8,7 @@ on:
         type: string
         required: true
       environment:
-        description: "Target environment: dev | staging | prod"
+        description: "Target environment: dev | staging | prod (used as kubectl namespace)"
         type: string
         required: true
       project-name:
@@ -21,13 +21,16 @@ on:
         required: true
     secrets:
       KUBE_CONFIG_DATA:
-        description: "Base64-encoded kubeconfig for the target cluster (provided by GitHub Environment)"
-        required: false   # environment: on the deploy job injects this from GitHub Environments
+        description: "Base64-encoded kubeconfig — must be passed via secrets: inherit from caller"
+        required: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}   # resolves per-env secrets (KUBE_CONFIG_DATA)
+    # NOTE: environment: intentionally omitted here.
+    # GitHub does not inject env-level secrets into reusable workflow jobs via secrets: inherit
+    # because the calling job (uses:) cannot declare environment: simultaneously.
+    # Namespace isolation is achieved via kubectl -n ${{ inputs.environment }}.
 
     steps:
       - uses: actions/checkout@v4
@@ -38,12 +41,9 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          RAW_LEN=$(printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | wc -c)
-          echo "KUBE_CONFIG_DATA raw length: $RAW_LEN chars"
-          printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config 2>&1 || echo "base64 -d exit: $?"
+          printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-          echo "Kubeconfig file size: $(wc -c < ~/.kube/config) bytes"
-          head -1 ~/.kube/config || echo "(empty)"
+          echo "Kubeconfig server: $(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
 
       - name: Deploy ${{ inputs.environment }} (image @${{ inputs.image-tag }})
         run: |
