@@ -38,11 +38,12 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+          RAW_LEN=$(printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | wc -c)
+          echo "KUBE_CONFIG_DATA raw length: $RAW_LEN chars"
+          printf '%s' "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config 2>&1 || echo "base64 -d exit: $?"
           chmod 600 ~/.kube/config
-          echo "Kubeconfig size: $(wc -c < ~/.kube/config) bytes"
-          echo "First line: $(head -1 ~/.kube/config)"
-          kubectl config view --minify 2>&1 | head -10 || true
+          echo "Kubeconfig file size: $(wc -c < ~/.kube/config) bytes"
+          head -1 ~/.kube/config || echo "(empty)"
 
       - name: Deploy ${{ inputs.environment }} (image @${{ inputs.image-tag }})
         run: |
