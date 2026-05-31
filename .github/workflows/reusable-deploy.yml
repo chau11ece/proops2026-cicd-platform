@@ -21,8 +21,8 @@ on:
         required: true
     secrets:
       KUBE_CONFIG_DATA:
-        description: "Base64-encoded kubeconfig — must be passed via secrets: inherit from caller"
-        required: true
+        description: "Base64-encoded kubeconfig — passed via secrets: inherit from caller repo"
+        required: false
 
 jobs:
   deploy:
