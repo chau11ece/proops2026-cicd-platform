@@ -19,6 +19,11 @@ on:
         description: "K8s deployment name and GHCR image name"
         type: string
         required: true
+      runner:
+        description: "Runner label — ubuntu-latest for EKS, self-hosted for minikube"
+        type: string
+        required: false
+        default: ubuntu-latest
     secrets:
       KUBE_CONFIG_DATA:
         description: "Base64-encoded kubeconfig — explicitly passed by each caller"
@@ -26,7 +31,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     # NOTE: environment: intentionally omitted here.
     # GitHub does not inject env-level secrets into reusable workflow jobs via secrets: inherit
     # because the calling job (uses:) cannot declare environment: simultaneously.
