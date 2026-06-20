@@ -28,6 +28,12 @@ on:
       KUBE_CONFIG_DATA:
         description: "Base64-encoded kubeconfig — explicitly passed by each caller"
         required: true
+      AWS_ACCESS_KEY_ID:
+        description: "AWS credentials for kubectl exec auth (aws eks get-token)"
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: "AWS credentials for kubectl exec auth (aws eks get-token)"
+        required: true
 
 jobs:
   deploy:
@@ -42,6 +48,13 @@ jobs:
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
 
       - name: Configure kubeconfig
         run: |
