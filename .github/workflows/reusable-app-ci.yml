@@ -48,6 +48,10 @@ jobs:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}
 
+      - name: Dependency audit (npm audit)
+        working-directory: ${{ inputs.working-directory }}
+        run: npm audit --audit-level=high || true
+
       - name: Security scan (Trivy filesystem)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
